@@ -2,6 +2,7 @@ import glob
 import os
 import sys
 import time
+import elasticapm
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -17,7 +18,9 @@ import argparse
 import logging
 import random
 
+client = elasticapm.Client(service_name="carla_test")
 
+@elasticapm.capture_span()
 def main():
     argparser = argparse.ArgumentParser(
         description=__doc__)
@@ -206,7 +209,7 @@ def main():
             rotation = ego_vehicle.get_transform().rotation
             new_transform = carla.Transform(location, rotation)
             new_transform.location.x -= 1
-            new_transform.location.z += 5ane invasion detected:
+            new_transform.location.z += 5
 
             new_transform.location.y -= 6
             #print(new_transform.rotation)
@@ -244,8 +247,11 @@ def main():
 if __name__ == '__main__':
 
     try:
+        client.begin_transaction(transaction_type="blabla")
         main()
+        
     except KeyboardInterrupt:
-        pass
+        client.end_transaction("blabla", "success")
+        
     finally:
         print('\nDone with tutorial_ego.')
