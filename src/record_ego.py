@@ -18,7 +18,7 @@ import argparse
 import logging
 import random
 
-client = elasticapm.Client(service_name="carla_test")
+client_apm = elasticapm.Client(service_name="carla_test")
 
 @elasticapm.capture_span()
 def main():
@@ -83,35 +83,35 @@ def main():
             logging.warning('Could not found any spawn points')
         
 
-        # --------------
-        # Add a RGB camera sensor to ego vehicle. 
-        # --------------
+        # # --------------
+        # # Add a RGB camera sensor to ego vehicle. 
+        # # --------------
         
-        cam_bp = None
-        cam_bp = world.get_blueprint_library().find('sensor.camera.rgb')
-        cam_bp.set_attribute("image_size_x",str(1920))
-        cam_bp.set_attribute("image_size_y",str(1080))
-        cam_bp.set_attribute("fov",str(105))
-        cam_bp.set_attribute("sensor_tick",str(3))
-        cam_location = carla.Location(-2,0,3)
-        cam_rotation = carla.Rotation(0,0,0)
-        cam_transform = carla.Transform(cam_location,cam_rotation)
-        ego_cam = world.spawn_actor(cam_bp,cam_transform,attach_to=ego_vehicle, attachment_type=carla.AttachmentType.Rigid)
-        ego_cam.listen(lambda image: image.save_to_disk('~/tutorial/output/%.6d.jpg' % image.frame))
+        # cam_bp = None
+        # cam_bp = world.get_blueprint_library().find('sensor.camera.rgb')
+        # cam_bp.set_attribute("image_size_x",str(1920))
+        # cam_bp.set_attribute("image_size_y",str(1080))
+        # cam_bp.set_attribute("fov",str(105))
+        # cam_bp.set_attribute("sensor_tick",str(3))
+        # cam_location = carla.Location(-2,0,3)
+        # cam_rotation = carla.Rotation(0,0,0)
+        # cam_transform = carla.Transform(cam_location,cam_rotation)
+        # ego_cam = world.spawn_actor(cam_bp,cam_transform,attach_to=ego_vehicle, attachment_type=carla.AttachmentType.Rigid)
+        # ego_cam.listen(lambda image: image.save_to_disk('~/tutorial/output/%.6d.jpg' % image.frame))
         
 
-        # --------------
-        # Add collision sensor to ego vehicle. 
-        # --------------
+        # # --------------
+        # # Add collision sensor to ego vehicle. 
+        # # --------------
         
-        col_bp = world.get_blueprint_library().find('sensor.other.collision')
-        col_location = carla.Location(0,0,0)
-        col_rotation = carla.Rotation(0,0,0)
-        col_transform = carla.Transform(col_location,col_rotation)
-        ego_col = world.spawn_actor(col_bp,col_transform,attach_to=ego_vehicle, attachment_type=carla.AttachmentType.Rigid)
-        def col_callback(colli):
-            print("Collision detected:\n"+str(colli)+'\n')
-        ego_col.listen(lambda colli: col_callback(colli))
+        # col_bp = world.get_blueprint_library().find('sensor.other.collision')
+        # col_location = carla.Location(0,0,0)
+        # col_rotation = carla.Rotation(0,0,0)
+        # col_transform = carla.Transform(col_location,col_rotation)
+        # ego_col = world.spawn_actor(col_bp,col_transform,attach_to=ego_vehicle, attachment_type=carla.AttachmentType.Rigid)
+        # def col_callback(colli):
+        #     print("Collision detected:\n"+str(colli)+'\n')
+        # ego_col.listen(lambda colli: col_callback(colli))
         
 
         # --------------
@@ -130,26 +130,30 @@ def main():
             print("Lane invasion detected:\n"+str(lane)+'\n')
             with open(lane_log_file, "a") as lane_file_object:
                 lane_file_object.write("Lane invasion detected:\n"+str(lane)+'\n')
+            client_apm.begin_transaction(transaction_type="track-do-thing")
+            client_apm.capture_message(message="Lane invasion detected:\n"+str(lane)+'\n')
+            client_apm.end_transaction("carla_transaction", "success")
+
         ego_lane.listen(lambda lane: lane_callback(lane))
         
 
-        # --------------
-        # Add Obstacle sensor to ego vehicle. 
-        # --------------
-        obstacle_log_file = "~/tutorial/recorder/obstacle_log.txt"
-        obstacle_file_object = open(obstacle_log_file, 'a')
+        # # --------------
+        # # Add Obstacle sensor to ego vehicle. 
+        # # --------------
+        # obstacle_log_file = "~/tutorial/recorder/obstacle_log.txt"
+        # obstacle_file_object = open(obstacle_log_file, 'a')
 
-        obs_bp = world.get_blueprint_library().find('sensor.other.obstacle')
-        obs_bp.set_attribute("only_dynamics",str(True))
-        obs_location = carla.Location(0,0,0)
-        obs_rotation = carla.Rotation(0,0,0)
-        obs_transform = carla.Transform(obs_location,obs_rotation)
-        ego_obs = world.spawn_actor(obs_bp,obs_transform,attach_to=ego_vehicle, attachment_type=carla.AttachmentType.Rigid)
-        def obs_callback(obs):
-            print("Obstacle detected:\n"+str(obs)+'\n')
-            with open(obstacle_log_file, "a") as obstacle_file_object:
-                obstacle_file_object.write("Obstacle detected:\n"+str(obs)+'\n')
-        ego_obs.listen(lambda obs: obs_callback(obs))
+        # obs_bp = world.get_blueprint_library().find('sensor.other.obstacle')
+        # obs_bp.set_attribute("only_dynamics",str(True))
+        # obs_location = carla.Location(0,0,0)
+        # obs_rotation = carla.Rotation(0,0,0)
+        # obs_transform = carla.Transform(obs_location,obs_rotation)
+        # ego_obs = world.spawn_actor(obs_bp,obs_transform,attach_to=ego_vehicle, attachment_type=carla.AttachmentType.Rigid)
+        # def obs_callback(obs):
+        #     print("Obstacle detected:\n"+str(obs)+'\n')
+        #     with open(obstacle_log_file, "a") as obstacle_file_object:
+        #         obstacle_file_object.write("Obstacle detected:\n"+str(obs)+'\n')
+        # ego_obs.listen(lambda obs: obs_callback(obs))
         
 
         # --------------
@@ -247,11 +251,13 @@ def main():
 if __name__ == '__main__':
 
     try:
-        client.begin_transaction(transaction_type="blabla")
         main()
         
     except KeyboardInterrupt:
-        client.end_transaction("blabla", "success")
+        pass
         
     finally:
         print('\nDone with tutorial_ego.')
+
+
+
