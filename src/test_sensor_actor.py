@@ -18,9 +18,6 @@ import argparse
 import logging
 import random
 
-
-
-@elasticapm.capture_span()
 def main():
     argparser = argparse.ArgumentParser(
         description=__doc__)
