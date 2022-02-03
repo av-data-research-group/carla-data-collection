@@ -54,7 +54,7 @@ def main():
         # Start recording
         # --------------
         
-        client.start_recorder('~/tutorial/recorder/recording01.log')
+        client.start_recorder('recorder/recording01.log')
         
 
         # --------------
@@ -80,27 +80,28 @@ def main():
             logging.warning('Could not found any spawn points')
         
 
-        # # --------------
-        # # Add a RGB camera sensor to ego vehicle. 
-        # # --------------
+        # --------------
+        # Add a RGB camera sensor to ego vehicle. 
+        # --------------
         
-        # cam_bp = None
-        # cam_bp = world.get_blueprint_library().find('sensor.camera.rgb')
-        # cam_bp.set_attribute("image_size_x",str(1920))
-        # cam_bp.set_attribute("image_size_y",str(1080))
-        # cam_bp.set_attribute("fov",str(105))
-        # cam_bp.set_attribute("sensor_tick",str(3))
-        # cam_location = carla.Location(-2,0,3)
-        # cam_rotation = carla.Rotation(0,0,0)
-        # cam_transform = carla.Transform(cam_location,cam_rotation)
-        # ego_cam = world.spawn_actor(cam_bp,cam_transform,attach_to=ego_vehicle, attachment_type=carla.AttachmentType.Rigid)
-        # ego_cam.listen(lambda image: image.save_to_disk('~/tutorial/output/%.6d.jpg' % image.frame))
+        cam_bp = None
+        cam_bp = world.get_blueprint_library().find('sensor.camera.rgb')
+        cam_bp.set_attribute("image_size_x",str(1920))
+        cam_bp.set_attribute("image_size_y",str(1080))
+        cam_bp.set_attribute("fov",str(105))
+        cam_bp.set_attribute("sensor_tick",str(3))
+        cam_location = carla.Location(-2,0,3)
+        cam_rotation = carla.Rotation(0,0,0)
+        cam_transform = carla.Transform(cam_location,cam_rotation)
+        ego_cam = world.spawn_actor(cam_bp,cam_transform,attach_to=ego_vehicle, attachment_type=carla.AttachmentType.Rigid)
+        # ego_cam.listen(lambda image: image.save_to_disk(f"output/camera/{image.frame}.jpg"))
         
 
         # --------------
         # Add collision sensor to ego vehicle. 
         # --------------
-        
+        collision_log_file = "output/recorder/collision_log.txt"
+
         col_bp = world.get_blueprint_library().find('sensor.other.collision')
         col_location = carla.Location(0,0,0)
         col_rotation = carla.Rotation(0,0,0)
@@ -108,14 +109,15 @@ def main():
         ego_col = world.spawn_actor(col_bp,col_transform,attach_to=ego_vehicle, attachment_type=carla.AttachmentType.Rigid)
         def col_callback(colli):
             print("Collision detected:\n"+str(colli)+'\n')
+            # with open(collision_log_file, "a") as collision_file_object:
+            #     collision_file_object.write("Collision warning:\n"+str(colli)+'\n')
         ego_col.listen(lambda colli: col_callback(colli))
         
 
         # --------------
         # Add Lane invasion sensor to ego vehicle. 
         # --------------
-        lane_log_file = "~/tutorial/recorder/lane_log.txt"
-        lane_file_object = open(lane_log_file, 'a')
+        lane_log_file = "output/recorder/lane_log.txt"
         
 
         lane_bp = world.get_blueprint_library().find('sensor.other.lane_invasion')
@@ -125,8 +127,8 @@ def main():
         ego_lane = world.spawn_actor(lane_bp,lane_transform,attach_to=ego_vehicle, attachment_type=carla.AttachmentType.Rigid)
         def lane_callback(lane):
             print("Lane invasion detected:\n"+str(lane)+'\n')
-            with open(lane_log_file, "a") as lane_file_object:
-                lane_file_object.write("Lane invasion detected:\n"+str(lane)+'\n')
+            # with open(lane_log_file, "a") as lane_file_object:
+            #    lane_file_object.write("Lane invasion detected:\n"+str(lane)+'\n')
 
         ego_lane.listen(lambda lane: lane_callback(lane))
         
@@ -134,8 +136,7 @@ def main():
         # --------------
         # Add Obstacle sensor to ego vehicle. 
         # --------------
-        obstacle_log_file = "~/tutorial/recorder/obstacle_log.txt"
-        obstacle_file_object = open(obstacle_log_file, 'a')
+        obstacle_log_file = "output/recorder/obstacle_log.txt"
 
         obs_bp = world.get_blueprint_library().find('sensor.other.obstacle')
         obs_bp.set_attribute("only_dynamics",str(True))
@@ -145,8 +146,8 @@ def main():
         ego_obs = world.spawn_actor(obs_bp,obs_transform,attach_to=ego_vehicle, attachment_type=carla.AttachmentType.Rigid)
         def obs_callback(obs):
             print("Obstacle detected:\n"+str(obs)+'\n')
-            with open(obstacle_log_file, "a") as obstacle_file_object:
-                obstacle_file_object.write("Obstacle detected:\n"+str(obs)+'\n')
+            # with open(obstacle_log_file, "a") as obstacle_file_object:
+            #     obstacle_file_object.write("Obstacle detected:\n"+str(obs)+'\n')
         ego_obs.listen(lambda obs: obs_callback(obs))
         
         # --------------
@@ -165,7 +166,6 @@ def main():
         ego_vehicle.set_autopilot(True)
         
         
-
         # --------------
         # Game loop. Prevents the script from finishing.
         # --------------
@@ -220,7 +220,7 @@ if __name__ == '__main__':
         pass
         
     finally:
-        print('\nDone with tutorial_ego.')
+        print('\nEnd of the experiment.')
 
 
 
