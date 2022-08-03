@@ -138,38 +138,37 @@ class CallBack(object):
         self._tag = tag
         self._data_provider = data_provider
         self._data_provider.register_sensor(tag, sensor_type, sensor)
-
-        self.latency = 0
+        os.makedirs(self.LOG_PATH + "/camera/", exist_ok=True)
 
     def __call__(self, data):
         start = time.time()
         if isinstance(data, carla.libcarla.Image):
-            self._parse_image_cb(data, self._tag)
+            file_path = self._parse_image_cb(data, self._tag)
         elif isinstance(data, carla.libcarla.LidarMeasurement):
-            self._parse_lidar_cb(data, self._tag)
+            file_path = self._parse_lidar_cb(data, self._tag)
         elif isinstance(data, carla.libcarla.SemanticLidarMeasurement):
-            self._parse_semantic_lidar_cb(data, self._tag)
+            file_path = self._parse_semantic_lidar_cb(data, self._tag)
         elif isinstance(data, carla.libcarla.RadarMeasurement):
-            self._parse_radar_cb(data, self._tag)
+            file_path = self._parse_radar_cb(data, self._tag)
         elif isinstance(data, carla.libcarla.GnssMeasurement):
-            self._parse_gnss_cb(data, self._tag)
+            file_path = self._parse_gnss_cb(data, self._tag)
         elif isinstance(data, carla.libcarla.IMUMeasurement):
-            self._parse_imu_cb(data, self._tag)
+            file_path = self._parse_imu_cb(data, self._tag)
         elif isinstance(data, GenericMeasurement):
-            self._parse_pseudosensor(data, self._tag)
+            file_path = self._parse_pseudosensor(data, self._tag)
         else:
             logging.error('No callback method for this sensor.')
 
         end = time.time()
         elapsed_time = end - start
+        size_kb = os.path.getsize(file_path) / 1024
 
-        if self.latency > 0:
-            self.latency = (self.latency + elapsed_time) / 2
-        else:
-            self.latency = elapsed_time
+        file_path = f"{self.LOG_PATH}/"
         
-        logging.info(f"average latency per callback: {self.latency}")
-        #print(f"average latency per callback: {self.latency}")
+        with open(f'{file_path}latency_log.txt', 'a') as latency_file:
+            latency_file.write(f'{elapsed_time}\n')
+        with open(f'{file_path}throughput_log.txt', 'a') as throughput_file:
+            throughput_file.write(f'{size_kb}\n')
 
 
     # Parsing CARLA physical Sensors
@@ -178,27 +177,30 @@ class CallBack(object):
         array = copy.deepcopy(array)
         array = np.reshape(array, (image.height, image.width, 4))
         self._data_provider.update_sensor(tag, array, image.frame)
-        file_name = f"{self.LOG_PATH}/camera/{tag}.jpg"
-        image.save_to_disk(file_name)
+        file_path = f"{self.LOG_PATH}/camera/{tag}.jpg"
+        image.save_to_disk(file_path)
         logging.debug(f"Image from sensor {tag}: {array}")
+        return file_path
 
     def _parse_lidar_cb(self, lidar_data, tag):
         points = np.frombuffer(lidar_data.raw_data, dtype=np.dtype('f4'))
         points = copy.deepcopy(points)
         points = np.reshape(points, (int(points.shape[0] / 4), 4))
         self._data_provider.update_sensor(tag, points, lidar_data.frame)
-        file_name = f"{self.LOG_PATH}/{tag}.npy"
-        np.save(file_name, points)
+        file_path = f"{self.LOG_PATH}/{tag}.npy"
+        np.save(file_path, points)
         logging.debug(f"Lidar data from sensor {tag}: {points}")
+        return file_path
 
     def _parse_semantic_lidar_cb(self, semantic_lidar_data, tag):
         points = np.frombuffer(semantic_lidar_data.raw_data, dtype=np.dtype('f4'))
         points = copy.deepcopy(points)
         points = np.reshape(points, (int(points.shape[0] / 6), 6))
         self._data_provider.update_sensor(tag, points, semantic_lidar_data.frame)
-        file_name = f"{self.LOG_PATH}/{tag}.npy"
-        np.save(file_name, points)
+        file_path = f"{self.LOG_PATH}/{tag}.npy"
+        np.save(file_path, points)
         logging.debug(f"Semantic lidar data from sensor {tag}: {points}")
+        return file_path
 
     def _parse_radar_cb(self, radar_data, tag):
         # [depth, azimuth, altitute, velocity]
@@ -207,18 +209,20 @@ class CallBack(object):
         points = np.reshape(points, (int(points.shape[0] / 4), 4))
         points = np.flip(points, 1)
         self._data_provider.update_sensor(tag, points, radar_data.frame)
-        file_name = f"{self.LOG_PATH}/{tag}.npy"
-        np.save(file_name, points)
+        file_path = f"{self.LOG_PATH}/{tag}.npy"
+        np.save(file_path, points)
         logging.debug(f"Radar data from sensor {tag}: {points}")
+        return file_path
 
     def _parse_gnss_cb(self, gnss_data, tag):
         array = np.array([gnss_data.latitude,
                           gnss_data.longitude,
                           gnss_data.altitude], dtype=np.float64)
         self._data_provider.update_sensor(tag, array, gnss_data.frame)
-        file_name = f"{self.LOG_PATH}/{tag}.npy"
-        np.save(file_name, array)
+        file_path = f"{self.LOG_PATH}/{tag}.npy"
+        np.save(file_path, array)
         logging.debug(f"Data from GNSS sensor {tag}: {array}")
+        return file_path
 
     def _parse_imu_cb(self, imu_data, tag):
         array = np.array([imu_data.accelerometer.x,
@@ -230,13 +234,17 @@ class CallBack(object):
                           imu_data.compass,
                          ], dtype=np.float64)
         self._data_provider.update_sensor(tag, array, imu_data.frame)
-        file_name = f"{self.LOG_PATH}/{tag}.npy"
-        np.save(file_name, array)
+        file_path = f"{self.LOG_PATH}/{tag}.npy"
+        np.save(file_path, array)
         logging.debug(f"Data from IMU sensor {tag}: {array}")
+        return file_path
 
     def _parse_pseudosensor(self, package, tag):
         self._data_provider.update_sensor(tag, package.data, package.frame)
+        file_path = f"{self.LOG_PATH}/{tag}.npy"
+        np.save(file_path, np.array(package.data['speed']))
         logging.debug(f"Data from pseudosensor sensor {tag}: {package.data}")
+        return file_path
 
 
 class SensorInterface(object):
