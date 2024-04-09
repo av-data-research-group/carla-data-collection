@@ -137,11 +137,13 @@ def imu_callback(data):
     }
 
     compass = data.__getattribute__("compass")
+    speed = get_speedometer(vehicle)
 
     save_obj = {
-        "accelerometer" : accelerometer,
-        "gyroscope" : gyroscope,
-        "compass" : compass
+        "accelerometer": accelerometer,
+        "gyroscope": gyroscope,
+        "compass": compass,
+        "speed": speed
     }
 
     if not os.path.exists("sensors/imu/"):
