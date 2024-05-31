@@ -180,10 +180,10 @@ class B5GCyberTestV2X(CarlanetEventListener):
                            'light_next_state': self._light_control_enum_to_str(next_light_state)
                            }
             
-            # GET locations and save it to csv
+            # GET locations and speed and save it to csv
             print("#" * 50)
             print("getting sensor data from car")
-            self.remote_agent.process_vehicle_data(self.vehicle, self.carlanet_manager)
+            self.remote_agent.process_vehicle_data(self.vehicle, self.carlanet_actors)
 
             ### CONTROL STAGE
             if not AUTO_PILOT:
@@ -214,13 +214,27 @@ class RemoteAgent:
     def calc_next_light_state(self, light_state: carla.VehicleLightState):
         return carla.VehicleLightState.NONE
     
-    def process_vehicle_data(vehicle, carlanet_manager):
+    def generate_carla_nodes_positions(self, carlanet_actors):
+        nodes_positions = []
+        for actor_id, actor in carlanet_actors.items():
+            transform: carla.Transform = actor.get_transform()
+            velocity: carla.Vector3D = actor.get_velocity()
+            position = dict()
+            position['actor_id'] = actor_id
+            position['position'] = [transform.location.x, transform.location.y, transform.location.z]
+            position['rotation'] = [transform.rotation.pitch, transform.rotation.yaw, transform.rotation.roll]
+            position['velocity'] = [velocity.x, velocity.y, velocity.z]
+            position['is_net_active'] = actor.alive
+            nodes_positions.append(position)
+        return nodes_positions
+
+    def process_vehicle_data(self, vehicle, carlanet_actors):
         file_name = f"sensors_high_traffic/gnss/vehicle-id-{vehicle.id}.csv"
 
         if not os.path.exists(f"sensors_high_traffic/gnss/"):
             os.makedirs(f"sensors_high_traffic/gnss/")
 
-        positions_obj = carlanet_manager._generate_carla_nodes_positions()[0]
+        positions_obj = self.generate_carla_nodes_positions(carlanet_actors)[0]
         x_speed = positions_obj["velocity"][0]
         y_speed = positions_obj["velocity"][1]
         z_speed = positions_obj["velocity"][2]
